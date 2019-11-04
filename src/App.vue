@@ -1,37 +1,29 @@
 <template>
-  <div class="wrap">
-    <el-container class="wrap">
-      <el-aside width="200px">
-        <sidebar></sidebar>
-      </el-aside>
-      <el-container>
-        <el-header>Header</el-header>
-        <el-main>
-          Main
-          <router-view></router-view>
-        </el-main>
-      </el-container>
-    </el-container>
-  </div>
+  <el-container>
+  <el-header>egoView</el-header>
+  <el-main>
+    <home/>
+  </el-main>
+</el-container>
 </template>
 
 <script>
-import sidebar from './components/sidebar'
+import home from '@/views/home'
 export default {
   name: 'App',
   components: {
-    sidebar
+    home
   },
 }
 </script>
 
 <style scoped="true">
-.wrap {
-  width: 100%;
-  height: 100%;
-}
+body > .el-container {
+    margin: 0 !important;
+    height: 100%;
+  }
 .el-header, .el-footer {
-    background-color: #B3C0D1;
+    background-color: #eee;
     color: #333;
     text-align: center;
     line-height: 60px;
@@ -43,10 +35,7 @@ export default {
   }
 
   .el-main {
-    background-color: #E9EEF3;
-    color: #333;
-    text-align: center;
-    line-height: 160px;
+    height: calc(100% - 60px);
   }
 
   body > .el-container {
