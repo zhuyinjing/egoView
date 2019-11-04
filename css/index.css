@@ -1,7 +1,0 @@
-.menuModalHeight {
-  height: calc(100% - 60px) !important;
-}
-.menuModalContent {
-  height: 100% !important;
-  overflow: auto !important;
-}
