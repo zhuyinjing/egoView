@@ -23,8 +23,11 @@ export default {
       })
     },
     initD3 () {
+      var self = this
+
       d3.selectAll('svg').remove()
-      let width = 1000, height = 400
+      let width = 1000, // read 的长度
+          height = 400
       let padding = {
         top: 50,
         left: 50,
@@ -33,97 +36,100 @@ export default {
       }
       let svg = d3.selectAll("#svgContainer")
                 .append("svg")
-                .attr("width", width)
+                .attr("width", width + padding.left + padding.right)
                 .attr("height", height)
                 .append("g")
                 .attr("transform", "translate("+ padding.left + "," + padding.top +")")
       let data = this.data
       let colorScale = d3.scaleOrdinal(d3.schemeCategory20)
-      let bottom_bar_total = 0
+
+      // rect.bottom_bar 所用到的数据
       let bottom_bar_y = 0
       let bottom_bar_height = 10
-      data.map(item => bottom_bar_total += (item.AlignmentEnd - item.AlignmentStart)) // 计算出 rect.bottom_bar 所对应的总数值
-      let bottom_bar_scale = d3.scaleLinear().domain([0, bottom_bar_total]).range([padding.left, width - padding.right])
-      let bottom_bar_temp = 0 // 临时变量，为了方便计算 rect.bottom_bar 每一个 rect 所占 width 比例的叠加总值
+      let bottom_bar_total = data.reduce((pre, {AlignmentStart, AlignmentEnd}) => pre + (AlignmentEnd - AlignmentStart), 0) // bottom_bar 的总和数值
+      let bottom_bar_temp = 0
+      let bottom_bar_data = data.map(({AlignmentStart, AlignmentEnd}) => bottom_bar_temp += width * (AlignmentEnd - AlignmentStart) / bottom_bar_total)
+      bottom_bar_data.unshift(0)
       svg.selectAll("rect.bottom_bar")
          .data(data)
          .enter()
          .append("rect")
-         .attr("x", (d, i) => {
-           if (i === 0) {
-             return 0
-           } else {
-             bottom_bar_temp += (data[i - 1].AlignmentEnd - data[i - 1].AlignmentStart) / bottom_bar_total
-             return bottom_bar_temp * width
-           }
-         })
+         .attr("x", (d, i) => bottom_bar_data[i])
          .attr("y", bottom_bar_y)
-         .attr("width", d => width * (d.AlignmentEnd - d.AlignmentStart) / bottom_bar_total)
+         .attr("width", (d, i) => bottom_bar_data[i + 1] - bottom_bar_data[i])
          .attr("height", bottom_bar_height)
          .attr("fill", d => colorScale(d.rName))
+         .attr("stroke", "black")
+         // .attr("stroke-width", "0.5")
 
-      return
+      // bottom_bar 动态比例尺
+      data.map(( {AlignmentStart, AlignmentEnd, rName}, i) => {
+        this["bottom_bar_scale" + rName] = d3.scaleLinear().domain([AlignmentStart, AlignmentEnd]).range([bottom_bar_data[i], bottom_bar_data[i + 1]])
+      })
 
-      let rectHeight = 10
-      let yRef = rectHeight, yQuery = height - rectHeight
-      let cigarArr = this.data
-      let refScale = d3.scaleLinear().domain([cigarArr[0].AlignmentStart, cigarArr[0].AlignmentEnd]).range([0, width])
-      let queryScale = d3.scaleLinear().domain([0, cigarArr[0].ReadLength]).range([0, width])
+      // rect.query
+      let query_margin = 100,
+          query_y = bottom_bar_y + bottom_bar_height + query_margin,
+          ref_y = bottom_bar_y + bottom_bar_height + 0.9
+      svg.append("rect")
+         .attr("x", 0)
+         .attr("y", query_y)
+         .attr("width", width)
+         .attr("height", bottom_bar_height)
 
-      // ref rect
-      g.append("rect").attr("x", 0).attr("y", 0).attr("width", width).attr("height", rectHeight).attr("fill", "#f7d448")
-      // query rect
-      g.append("rect").attr("x", 0).attr("y", height - rectHeight).attr("width", width).attr("height", rectHeight).attr("fill", "#f7d448")
+      let queryScale = d3.scaleLinear().domain([0, data[0].ReadLength]).range([0, width])
 
-      let qs , qe , rs , re
-      var refLengthFlag = cigarArr[0].POSTION // 记录 reference 上每次叠加后的实际值
 
-      for (let i = 0;i < cigarArr.length;i++) {
-        let item = cigarArr[i]
-        qs = 0, qe = 0, rs = refScale(item.POSTION), re = refScale(item.POSTION)
+      for (let i = 0;i < data.length;i++) {
+        var item = data[i]
+        var refScale = this["bottom_bar_scale" + item.rName]
+        var qs = 0, qe = 0, rs = refScale(item.POSTION), re = refScale(item.POSTION)
+        var refLengthFlag = item.POSTION // 记录 reference 上每次叠加后的实际值
 
-        g.selectAll(".path")
+        svg.selectAll(".path")
          // .data([{operator:'S',length:255},{operator:'M',length:2},{operator:'M',length:9}])
          .data(item.CIGAR.cigarElements)
          .enter()
          .append("path")
          .attr("d", drawPath)
-         // .attr("stroke", "blue")
-         // .attr("stroke-width", "none")
-         .attr("fill", "lightblue")
-         // .on("mouseover", function () {
-         //   console.log(d3.select(this).data()[0]);
-         // })
+         .attr("fill", colorScale(item.rName))
+         .attr("fill-opacity", 0.5)
+
+         function drawPath (d) {
+           let flag = d.operator
+           let length = d.length
+           let minPixel = 0 // 在图上小于 minPixel 的 path 默认不画
+           if (flag === 'S' || flag === 'I') {
+             qs = qe
+             qe = qs + queryScale(length)
+             // console.log('s' + rs + "," +re);
+             if (qe - qs > minPixel) {
+               return 'M' + qs + ' ' + query_y + ' L '+ qe + ' ' + query_y
+             }
+           } else if (flag === 'M' || flag === '=' || flag === 'X') {
+             qs = qe
+             qe = qs + queryScale(length)
+             rs = re
+             refLengthFlag += length
+             re = refScale(refLengthFlag)
+             // console.log('m' + rs + "," +re);
+             if (qe - qs > minPixel) {
+               return 'M' + qs + ' ' + query_y + ' L ' + rs + ' ' + ref_y + ' L ' + re + ' ' + ref_y +   ' L '+ qe + ' ' + query_y
+             }
+           } else if (flag === 'D' || flag === 'N'){
+             rs = re
+             refLengthFlag += length
+             re = refScale(refLengthFlag)
+             if (qe - qs > minPixel) {
+               return 'M' + rs + ' ' + query_y + ' L '+ re + ' ' + query_y
+             }
+           }
+         }
       }
 
-      function drawPath (d) {
-        let flag = d.operator
-        let length = d.length
-        let minPixel = 0 // 在图上小于 minPixel 的 path 默认不画
-        if (flag === 'S' || flag === 'I') {
-          qs = qe
-          qe = qs + queryScale(length)
-          if (qe - qs > minPixel) {
-            return 'M' + qs + ' ' + yQuery + ' L '+ qe + ' ' + yQuery
-          }
-        } else if (flag === 'M' || flag === '=' || flag === 'X') {
-          qs = qe
-          qe = qs + queryScale(length)
-          rs = re
-          re = refScale(refLengthFlag)
-          refLengthFlag += length
-          if (qe - qs > minPixel) {
-            return 'M' + qs + ' ' + yQuery + ' L ' + rs + ' ' + yRef + ' L ' + re + ' ' + yRef +   ' L '+ qe + ' ' + yQuery
-          }
-        } else if (flag === 'D' || flag === 'N'){
-          rs = re
-          re = refScale(refLengthFlag)
-          refLengthFlag += length
-          if (qe - qs > minPixel) {
-            return 'M' + rs + ' ' + yQuery + ' L '+ re + ' ' + yQuery
-          }
-        }
-      }
+
+
+
     },
   }
 }
