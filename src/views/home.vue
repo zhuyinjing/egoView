@@ -11,6 +11,7 @@ export default {
   data () {
     return {
       data: null,
+      chrData: null
     }
   },
   mounted () {
@@ -18,14 +19,16 @@ export default {
   methods: {
     getData () {
       this.axios.get("/admin/get_singel_read?genome=1&start=10482&end=10775&readName=376e2c9d-e6c5-4c01-ac2d-3aed61e774e9").then(res => {
-        this.data = Object.values(res.data)[0]
+        // this.data = res.data["376e2c9d-e6c5-4c01-ac2d-3aed61e774e9"].sort((a, b) => a.rName - b.rName)
+        this.data = res.data["376e2c9d-e6c5-4c01-ac2d-3aed61e774e9"]
+        this.chrData = res.data.chormInfo
         this.initD3()
       })
     },
     initD3 () {
       var self = this
-
       d3.selectAll('svg').remove()
+
       let width = 1000, // read 的长度
           height = 400
       let padding = {
@@ -38,18 +41,80 @@ export default {
                 .append("svg")
                 .attr("width", width + padding.left + padding.right)
                 .attr("height", height)
+                .style("border", "1px solid #d2d2d2")
                 .append("g")
                 .attr("transform", "translate("+ padding.left + "," + padding.top +")")
-      let data = this.data
-      let colorScale = d3.scaleOrdinal(d3.schemeCategory20)
 
-      // rect.bottom_bar 所用到的数据
-      let bottom_bar_y = 0
+      let data = this.data
+      let colorScale = d3.scaleOrdinal(d3.schemeCategory10)
+
+      // ref_block 染色体用到的数据
+      let chrData = this.chrData
+      let ref_block_total = chrData.reduce((pre, {length}) => pre + length, 0)
+      let ref_block_temp = 0
+      let ref_block_data = chrData.map(({length}) => ref_block_temp += width * (length) / ref_block_total)
+      ref_block_data.unshift(0)
+
+      // ref_block 动态比例尺
+      chrData.map(( {length, code}, i) => {
+        this["ref_block_scale" + code] = d3.scaleLinear().domain([0, length]).range([ref_block_data[i], ref_block_data[i + 1]])
+      })
+
+      console.log(this["ref_block_scale15"].domain(), this["ref_block_scale15"].range(), this["ref_block_scale15"](102504137), this["ref_block_scale15"](102520300));
+
+      // rect.ref_block
+      let ref_block_height = 10
+      let ref_block_y = 20
+      svg.selectAll("rect.ref_block")
+         .data(chrData)
+         .enter()
+         .append("rect")
+         .attr("x", (d, i) => ref_block_data[i])
+         .attr("y", ref_block_y)
+         .attr("width", (d, i) => ref_block_data[i + 1] - ref_block_data[i])
+         .attr("height", ref_block_height)
+         .attr("fill", d => colorScale(d.code))
+         .attr("stroke", "black")
+
+      // rect.bottom_bar 和 rect.top_bar 所用到的数据
       let bottom_bar_height = 10
       let bottom_bar_total = data.reduce((pre, {AlignmentStart, AlignmentEnd}) => pre + (AlignmentEnd - AlignmentStart), 0) // bottom_bar 的总和数值
       let bottom_bar_temp = 0
       let bottom_bar_data = data.map(({AlignmentStart, AlignmentEnd}) => bottom_bar_temp += width * (AlignmentEnd - AlignmentStart) / bottom_bar_total)
       bottom_bar_data.unshift(0)
+
+      // rect.top_bar
+      let top_bar_height = 100
+      let top_bar_y = height / 2 - top_bar_height
+      svg.selectAll("rect.top_bar")
+         .data(data)
+         .enter()
+         .append("rect")
+         .attr("x", (d, i) => bottom_bar_data[i])
+         .attr("y", top_bar_y)
+         .attr("width", (d, i) => bottom_bar_data[i + 1] - bottom_bar_data[i])
+         .attr("height", top_bar_height)
+         .attr("fill", d => colorScale(d.rName))
+         .attr("stroke", "black")
+         .style("opacity",0.5)
+
+       // path.ref_mapping
+       let ref_mapping_y = ref_block_y + ref_block_height
+       svg.selectAll("path.ref_mapping")
+          .data(data)
+          .enter()
+          .append("path")
+          .attr("d", (d, i) => {
+            return "M " + bottom_bar_data[i] + " " + top_bar_y + "L" + this["ref_block_scale" + d.rName](d.AlignmentStart) + " " + ref_mapping_y
+                   + "L" + this["ref_block_scale" + d.rName](d.AlignmentEnd) + " " + ref_mapping_y
+                   + "L" + bottom_bar_data[i + 1] + " " + top_bar_y + "Z"
+          })
+          .attr("fill", d => colorScale(d.rName))
+          .attr("stroke", "black")
+          .attr("stroke-width", "0.5px")
+
+      // rect.bottom_bar
+      let bottom_bar_y = height / 2
       svg.selectAll("rect.bottom_bar")
          .data(data)
          .enter()
