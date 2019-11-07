@@ -4,28 +4,74 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
     <title>egoView</title>
-    <style media="screen">
-      html, body {
+    <style>
+      * {
+        font-family: "Helvetica Neue",Helvetica,"PingFang SC","Hiragino Sans GB","Microsoft YaHei","微软雅黑",Arial,sans-serif;
+      }
+      div {
+        font-size: 14px;
+      }
+      body {
+        width: 100%;
+        /* min-width: 1000px; */
+        overflow-x: hidden;
         margin: 0;
         padding: 0;
-        width: 100%;
         height: 100%;
       }
       #app {
         width: 100%;
         height: 100%;
       }
-      a {
-        outline: none !important;
-        text-decoration: none !important;
+      html {
+        width: 100%;
+        height: 100%;
       }
       .cursor-pointer {
         cursor: pointer;
+      }
+      /* DT 页数 样式 */
+      .active{
+        border: 1px solid #979797 !important;
+        background: linear-gradient(to bottom, #fff 0%, #dcdcdc 100%);
+      }
+      .paginate_button a {
+        color: #666 !important;
+        outline: none !important;
+        text-decoration: none !important;
+      }
+      .paginate_button:hover a {
+        color: #fff !important;
+      }
+      .disabled:hover a {
+        color: #666 !important;
+      }
+      .paginate_button .active a {
+        text-decoration: none !important;
+      }
+      .previous a,.next a{
+        text-decoration: none !important;
+        out-line: none !important;
+        color: #666 !important;
+      }
+      /* DT 导出按钮样式 */
+      .btn-default {
+        /* width: 100px !important; */
+        height: 35px !important;
+        cursor: pointer;
+      }
+      /* DT 表格内容居中 */
+      .dataTable{
+        text-align: center;
+      }
+      .detailDiv {
+        text-align: left;
       }
     </style>
   </head>
   <body>
     <div id="app"></div>
+    <script type="text/javascript" src="/static/jquery.min.js"></script>
     <!-- built files will be auto injected -->
   </body>
 </html>

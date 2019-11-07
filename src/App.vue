@@ -2,17 +2,15 @@
   <el-container>
   <el-header>egoView</el-header>
   <el-main>
-    <home/>
+    <router-view />
   </el-main>
 </el-container>
 </template>
 
 <script>
-import home from '@/views/home'
 export default {
   name: 'App',
   components: {
-    home
   },
 }
 </script>

@@ -1,6 +1,5 @@
 import Vue from 'vue'
 import Router from 'vue-router'
-const home = resolve => require(['@/views/home'], resolve)
 
 Vue.use(Router)
 
@@ -8,13 +7,18 @@ export default new Router({
   routes: [
     {
       path: '/',
-      name: 'home',
-      component: home
+      name: 'list',
+      component: resolve => require(['@/views/list'], resolve)
     },
     {
-      path: '/home',
-      name: 'home',
-      component: home
+      path: '/plot',
+      name: 'plot',
+      component: resolve => require(['@/views/plot'], resolve)
+    },
+    {
+      path: '/list',
+      name: 'list',
+      component: resolve => require(['@/views/list'], resolve)
     },
   ]
 })

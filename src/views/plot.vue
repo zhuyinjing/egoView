@@ -11,7 +11,7 @@ export default {
   data () {
     return {
       data: null,
-      chrData: null
+      chrData: null,
     }
   },
   mounted () {
@@ -60,8 +60,6 @@ export default {
         this["ref_block_scale" + code] = d3.scaleLinear().domain([0, length]).range([ref_block_data[i], ref_block_data[i + 1]])
       })
 
-      console.log(this["ref_block_scale15"].domain(), this["ref_block_scale15"].range(), this["ref_block_scale15"](102504137), this["ref_block_scale15"](102520300));
-
       // rect.ref_block
       let ref_block_height = 10
       let ref_block_y = 20
@@ -75,6 +73,17 @@ export default {
          .attr("height", ref_block_height)
          .attr("fill", d => colorScale(d.code))
          .attr("stroke", "black")
+
+       // text.ref_block
+       let ref_block_text_y = 5
+       svg.selectAll("rect.ref_block")
+          .data(chrData)
+          .enter()
+          .append("text")
+          .text(d => d.name.split("chr")[1])
+          .attr("transform", (d, i) => "translate(" + (ref_block_data[i] + (ref_block_data[i + 1] - ref_block_data[i]) / 2) + ", " + ref_block_text_y + ")")
+          .style("font-size", 12)
+          .style('text-anchor',"middle")
 
       // rect.bottom_bar 和 rect.top_bar 所用到的数据
       let bottom_bar_height = 10
@@ -142,7 +151,10 @@ export default {
          .attr("width", width)
          .attr("height", bottom_bar_height)
 
-      let queryScale = d3.scaleLinear().domain([0, data[0].ReadLength]).range([0, width])
+      let queryScale = d3.scaleLinear().domain([0, data[0].ReadLength]).range([0, width]).nice()
+      let queryAxis = d3.axisBottom().scale(queryScale).ticks(5).tickSize(0).tickPadding(10).tickFormat(d3.format(".2s"))
+      let query = svg.append("g").call(queryAxis).attr("transform","translate("+ 0 +"," + (query_y + bottom_bar_height) +")")
+      d3.select("path.domain").remove() // 把 queryAxis 的那条横线删掉
 
 
       for (let i = 0;i < data.length;i++) {
