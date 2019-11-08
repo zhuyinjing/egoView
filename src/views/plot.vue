@@ -1,6 +1,5 @@
 <template>
   <div>
-    <el-button type="danger" size="small" round @click="getData()">draw</el-button>
     <div id="svgContainer"></div>
   </div>
 </template>
@@ -15,9 +14,40 @@ export default {
     }
   },
   mounted () {
+    this.getTopData()
   },
   methods: {
-    getData () {
+    getTopData () {
+      let svg = d3.select("#svgContainer").append("svg").attr("width", 500).attr("height", 500)
+    
+      svg.selectAll(".g")
+        .data([[1,2],[3,4],[5,6]])
+        .enter()
+        .append("g")
+        .attr("transform", (d, i) => "translate(0," + i * 50  + ")")
+        .selectAll(".text")
+        .data(d => d)
+        .enter()
+        .append("text")
+        .text(d => d)
+        .attr("transform", (d, i) => "translate("+ i * 10 +",0)")
+        .attr("stroke", "black")
+      return
+
+      let data = JSON.parse(sessionStorage.getItem('plot_data'))
+      let chromId = data.chromId
+      let start = data.start > 1000 ? data.start - 1000 : 0
+      let end = data.info.END - 0 + 1000
+      this.axios.get('/admin/get_structural_variation_reads?chromId='+ chromId +'&start='+ start +'&end='+ end).then(res => {
+        if (res.data.message_type === 'success') {
+          this.data = res.data
+          this.initD3()
+        } else {
+          this.$message.error('请求出错！')
+        }
+      })
+    },
+    getBottomData () {
       this.axios.get("/admin/get_singel_read?genome=1&start=10482&end=10775&readName=376e2c9d-e6c5-4c01-ac2d-3aed61e774e9").then(res => {
         // this.data = res.data["376e2c9d-e6c5-4c01-ac2d-3aed61e774e9"].sort((a, b) => a.rName - b.rName)
         this.data = res.data["376e2c9d-e6c5-4c01-ac2d-3aed61e774e9"]
