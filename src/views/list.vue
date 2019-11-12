@@ -9,8 +9,15 @@
           <table id="patients" width="100%" cellspacing="0" class="display table table-striped table-bordered">
               <thead>
               <tr>
+                <th></th>
+                <th>alt</th>
+                <th>chromId</th>
+                <th>filter</th>
                 <th>start</th>
                 <th>end</th>
+                <th>qual</th>
+                <th>reference</th>
+                <th>sampleName</th>
                 <th>vcfId</th>
                 <th>操作</th>
               </tr>
@@ -42,7 +49,7 @@ export default {
     initTable () {
       let self = this
       $(document).ready(function() {
-          self.table = $('#patients').DataTable({
+          var table = $('#patients').DataTable({
               "pageLength": 25,
               "bPaginate" : true,//分页工具条显示
               //"sPaginationType" : "full_numbers",//分页工具条样式
@@ -61,9 +68,29 @@ export default {
               //通过ajax实现分页的url路径
               "sAjaxSource" : "/admin/get_VCF_list?p=" + 1,
               "aoColumns" : [{
+                  "class": "details-control",
+                  "orderable": false,
+                  "mDataProp": 1,
+                  "defaultContent": ""
+              },{
+                  "mDataProp" : "alt",
+                  "mRender" : function(data, type, full) {
+                    return '<xmp>' + data + '</xmp>'
+                  }
+              }, {
+                  "mDataProp" : "chromId"
+              }, {
+                  "mDataProp" : "filter"
+              }, {
                   "mDataProp" : "start"
               }, {
                   "mDataProp" : "info.END"
+              }, {
+                  "mDataProp" : "qual"
+              }, {
+                  "mDataProp" : "reference"
+              }, {
+                  "mDataProp" : "sampleName"
               }, {
                   "mDataProp" : "vcfId"
               }, {
@@ -73,6 +100,45 @@ export default {
                   }
               }],
           });
+
+          function format ( d ) {
+            delete d.info.RNAMES  // 不需要显示此字段
+            let keys = Object.keys(d.info)
+            let str = keys.reduce((pre, cur) => pre.concat(`<div class='detailDiv'>${cur}: ${d.info[cur]}</div>`), "")
+            return str
+          }
+
+        var detailRows = [];
+        // 防止报 _detailsShow undefined 错误
+        $('#patients tbody').off('click', 'tr td.details-control');
+        $('#patients tbody').on( 'click', 'tr td.details-control', function () {
+            var tr = $(this).closest('tr');
+            var row = table.row( tr );
+            var idx = $.inArray( tr.attr('id'), detailRows );
+
+            if ( row.child.isShown() ) {
+                tr.removeClass( 'details' );
+                row.child.hide();
+
+                // Remove from the 'open' array
+                detailRows.splice( idx, 1 );
+            }
+            else {
+                tr.addClass( 'details' );
+                row.child( format( row.data() ) ).show();
+
+                // Add to the 'open' array
+                if ( idx === -1 ) {
+                    detailRows.push( tr.attr('id') );
+                }
+            }
+        });
+
+        table.on( 'draw', function () {
+            $.each( detailRows, function ( i, id ) {
+                $('#'+id+' td.details-control').trigger( 'click' );
+            } );
+        });
 
           $('#patients tbody').on( 'click', '#plotBtn', function () {
             var row = $(this).parents('tr')[0]
@@ -99,12 +165,21 @@ export default {
 .clear {
   clear: both;
 }
-.labelStyle {
-  display: inline-block;
-  width: 95px;
-  text-align: end;
+</style>
+<style>
+td.details-control {
+    background: url('../assets/img/details_open.png') no-repeat center center;
+    cursor: pointer;
 }
-.label-font {
-  font-size: 14px;
+tr.details td.details-control {
+    background: url('../assets/img/details_close.png') no-repeat center center;
+}
+.detailDiv {
+  padding: 5px 35px;
+  text-align: left;
+}
+.font-overflow {
+  word-break: break-all;
+  word-wrap: break-word;
 }
 </style>

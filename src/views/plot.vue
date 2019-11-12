@@ -1,6 +1,7 @@
 <template>
   <div>
-    <div id="svgContainer"></div>
+    <div id="svgTopContainer"></div>
+    <div id="svgBottomContainer"></div>
   </div>
 </template>
 
@@ -18,22 +19,18 @@ export default {
   },
   methods: {
     getTopData () {
-      let svg = d3.select("#svgContainer").append("svg").attr("width", 500).attr("height", 500)
-    
-      svg.selectAll(".g")
-        .data([[1,2],[3,4],[5,6]])
-        .enter()
-        .append("g")
-        .attr("transform", (d, i) => "translate(0," + i * 50  + ")")
-        .selectAll(".text")
-        .data(d => d)
-        .enter()
-        .append("text")
-        .text(d => d)
-        .attr("transform", (d, i) => "translate("+ i * 10 +",0)")
-        .attr("stroke", "black")
-      return
-
+      // svg.selectAll(".g")
+      //   .data([[1,2],[3,4],[5,6]])
+      //   .enter()
+      //   .append("g")
+      //   .attr("transform", (d, i) => "translate(0," + i * 50  + ")")
+      //   .selectAll(".text")
+      //   .data(d => d)
+      //   .enter()
+      //   .append("text")
+      //   .text(d => d)
+      //   .attr("transform", (d, i) => "translate("+ i * 10 +",0)")
+      //   .attr("stroke", "black")
       let data = JSON.parse(sessionStorage.getItem('plot_data'))
       let chromId = data.chromId
       let start = data.start > 1000 ? data.start - 1000 : 0
@@ -67,7 +64,7 @@ export default {
         right: 50,
         bottom: 50
       }
-      let svg = d3.selectAll("#svgContainer")
+      let svg = d3.selectAll("#svgBottomContainer")
                 .append("svg")
                 .attr("width", width + padding.left + padding.right)
                 .attr("height", height)
