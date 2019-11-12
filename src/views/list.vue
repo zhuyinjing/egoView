@@ -104,7 +104,10 @@ export default {
           function format ( d ) {
             delete d.info.RNAMES  // 不需要显示此字段
             let keys = Object.keys(d.info)
-            let str = keys.reduce((pre, cur) => pre.concat(`<div class='detailDiv'>${cur}: ${d.info[cur]}</div>`), "")
+            // let str = keys.reduce((pre, cur) => pre.concat(`<div class='detailDiv'>${cur}: ${d.info[cur]}</div>`), "")
+            let str = keys.reduce((pre, cur) => pre.concat(`<td class='bgColor'>${cur}</td>`), "<table class='gridtable'><tr>")
+            str = str.concat(keys.reduce((pre, cur) => pre.concat(`<td>${d.info[cur]}</td>`), "<tr>"))
+            str = str.concat("</tr></table>")
             return str
           }
 
@@ -178,8 +181,26 @@ tr.details td.details-control {
   padding: 5px 35px;
   text-align: left;
 }
-.font-overflow {
-  word-break: break-all;
-  word-wrap: break-word;
+table.gridtable {
+    width: 100%;
+    text-align: center;
+    font-size:14px;
+    color:#333333;
+    border-width: 1px;
+    border-color: #ebeef5;
+    border-collapse: collapse;
+    table-layout:fixed;
+}
+.bgColor {
+  background-color: #f9f9f9 !important;
+}
+table.gridtable td {
+    border-width: 1px;
+    padding: 8px;
+    border-style: solid;
+    border-color: #ebeef5;
+    background-color: #ffffff;
+    word-break: break-all;  /* 超出换行 */
+    word-wrap: break-word;
 }
 </style>
