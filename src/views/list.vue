@@ -14,7 +14,6 @@
                 <th>chromId</th>
                 <th>filter</th>
                 <th>start</th>
-                <th>end</th>
                 <th>qual</th>
                 <th>reference</th>
                 <th>sampleName</th>
@@ -83,8 +82,6 @@ export default {
                   "mDataProp" : "filter"
               }, {
                   "mDataProp" : "start"
-              }, {
-                  "mDataProp" : "info.END"
               }, {
                   "mDataProp" : "qual"
               }, {

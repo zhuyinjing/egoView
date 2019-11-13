@@ -12,6 +12,8 @@ export default {
     return {
       data: null,
       chrData: null,
+      readsData: null,
+      chromId: null, // get value from sessionStorage
     }
   },
   mounted () {
@@ -33,28 +35,158 @@ export default {
       //   .attr("stroke", "black")
       let data = JSON.parse(sessionStorage.getItem('plot_data'))
       let chromId = data.chromId
+      this.chromId = chromId
       let start = data.start > 1000 ? data.start - 1000 : 0
-      let end = data.info.END - 0 + 1000
+      let end = data.info.END ? data.info.END - 0 + 1000 : start + 1000
       this.axios.get('/admin/get_structural_variation_reads?chromId='+ chromId +'&start='+ start +'&end='+ end).then(res => {
-        if (res.data.message_type === 'success') {
-          this.data = res.data
-          this.initD3()
-        } else {
-          this.$message.error('请求出错！')
-        }
+          this.chrData = res.data.chormInfo
+          this.readsData = res.data.blockMap
+          this.initTopSvg()
       })
     },
+    initTopSvg () {
+      let self = this
+
+      let blockList = this.readsData.blockList
+      let data = blockList.map(item => this.readsData[item])
+      let chrData = this.chrData
+      let chromId = this.chromId
+
+      let width = 1000, // read 的长度
+          height = 400 + this.readsData[chromId + '_1'].readsMap.length * 10 // 默认高度 + 主 reads 的条数的高度
+
+      let padding = {
+        top: 50,
+        left: 50,
+        right: 50,
+        bottom: 50
+      }
+
+      let svg = d3.selectAll("#svgTopContainer")
+                .append("svg")
+                .attr("width", width + padding.left + padding.right)
+                .attr("height", height)
+                .style("border", "1px solid #d2d2d2")
+                .attr("id", "topSvg")
+                .append("g")
+                .attr("transform", "translate("+ padding.left + "," + padding.top +")")
+
+      let colorScale = d3.scaleOrdinal(d3.schemeCategory10)
+
+      // ref_block 染色体用到的数据
+      let ref_block_total = chrData.reduce((pre, {length}) => pre + length, 0)
+      let ref_block_temp = 0
+      let ref_block_data = chrData.map(({length}) => ref_block_temp += width * (length) / ref_block_total)
+      ref_block_data.unshift(0)
+
+      // ref_block 动态比例尺
+      chrData.map(( {length, code}, i) => {
+        this["ref_block_scale" + code] = d3.scaleLinear().domain([0, length]).range([ref_block_data[i], ref_block_data[i + 1]])
+      })
+
+      // rect.ref_block
+      let ref_block_height = 10
+      let ref_block_y = 20
+      svg.selectAll("rect.ref_block")
+         .data(chrData)
+         .enter()
+         .append("rect")
+         .attr("x", (d, i) => ref_block_data[i])
+         .attr("y", ref_block_y)
+         .attr("width", (d, i) => ref_block_data[i + 1] - ref_block_data[i])
+         .attr("height", ref_block_height)
+         .attr("fill", d => colorScale(d.code))
+         .attr("stroke", "black")
+
+       // text.ref_block
+       let ref_block_text_y = 5
+       svg.selectAll("rect.ref_block")
+          .data(chrData)
+          .enter()
+          .append("text")
+          .text(d => d.name.split("chr")[1])
+          .attr("transform", (d, i) => "translate(" + (ref_block_data[i] + (ref_block_data[i + 1] - ref_block_data[i]) / 2) + ", " + ref_block_text_y + ")")
+          .style("font-size", 12)
+          .style('text-anchor',"middle")
+
+      // rect.ref_interval 和 rect.ref_interval 所用到的数据
+      let lineHeight = 10
+      let ref_interval_height = this.readsData[this.chromId + '_1'].readsMap.length * lineHeight
+      let ref_interval_total = data.reduce((pre, {length}) => pre + (length[1] - length[0]), 0) // ref_interval 的总和数值
+      let ref_interval_temp = 0
+      let ref_interval_data = data.map(({length}) => ref_interval_temp += width * (length[1] - length[0]) / ref_interval_total)
+
+      ref_interval_data.unshift(0)
+
+      // rect.ref_interval
+      let ref_interval_margin = 30
+      let ref_interval_y = ref_block_y + ref_block_height + ref_interval_margin
+      svg.selectAll("rect.ref_interval")
+         .data(data)
+         .enter()
+         .append("rect")
+         .attr("x", (d, i) => ref_interval_data[i])
+         .attr("y", ref_interval_y)
+         .attr("width", (d, i) => ref_interval_data[i + 1] - ref_interval_data[i])
+         .attr("height", ref_interval_height)
+         .attr("fill", "#fff")
+         .attr("stroke", "black")
+         .attr("stroke-width", "1")
+
+      // path.ref_mapping
+      let ref_mapping_y = ref_block_y + ref_block_height
+      svg.selectAll("path.ref_mapping")
+         .data(data)
+         .enter()
+         .append("path")
+         .attr("d", (d, i) => {
+           return "M " + ref_interval_data[i] + " " + ref_interval_y + "L" + this["ref_block_scale" + d.readsMap[0].rName](d.length[0]) + " " + ref_mapping_y
+                  + "L" + this["ref_block_scale" + d.readsMap[0].rName](d.length[1]) + " " + ref_mapping_y + "L" + ref_interval_data[i + 1] + " " + ref_interval_y + "Z"
+
+         })
+         .attr("fill", d => colorScale(d.readsMap[0].rName))
+         .attr("stroke", "black")
+         .attr("stroke-width", "0.5px")
+
+      // line.alignment 所用到的动态比例尺
+      data.map(({length}, i) => {
+        this["alignment_scale" + blockList[i]] = d3.scaleLinear().domain([length[0], length[1]]).range([ref_interval_data[i], ref_interval_data[i + 1]])
+      })
+
+      // line.alignment 的 y 值基准
+      let lineIndexArr = data[0].readsMap.map(d => d.QName)
+
+      // line.alignment
+      for (let i = 0;i < blockList.length;i++) {
+        let item = blockList[i]
+        svg.selectAll("line.alignment")
+           .data(data[i].readsMap)
+           .enter()
+           .append("line")
+           .attr("x1", d => this["alignment_scale" + item](d.AlignmentStart))
+           .attr("x2", d => this["alignment_scale" + item](d.AlignmentEnd))
+           .attr("y1", d => {console.log(ref_interval_y + lineIndexArr.indexOf(d.QName) * lineHeight);return ref_interval_y + lineIndexArr.indexOf(d.QName) * lineHeight})
+           .attr("y2", d => ref_interval_y + lineIndexArr.indexOf(d.QName) * lineHeight)
+           .attr("stroke-width", 3)
+           .attr("stroke", d => d.readStrand ? "blue" : "red")
+           .attr("stroke-opacity", 0.5)
+           .attr("stroke-linecap", "round")
+      }
+
+
+
+    },
     getBottomData () {
-      this.axios.get("/admin/get_singel_read?genome=1&start=10482&end=10775&readName=376e2c9d-e6c5-4c01-ac2d-3aed61e774e9").then(res => {
+      this.axios.get("/admin/get_singel_read?chromId=1&start=10482&end=10775&readName=376e2c9d-e6c5-4c01-ac2d-3aed61e774e9").then(res => {
         // this.data = res.data["376e2c9d-e6c5-4c01-ac2d-3aed61e774e9"].sort((a, b) => a.rName - b.rName)
         this.data = res.data["376e2c9d-e6c5-4c01-ac2d-3aed61e774e9"]
         this.chrData = res.data.chormInfo
-        this.initD3()
+        this.initBottomSvg()
       })
     },
-    initD3 () {
+    initBottomSvg () {
       var self = this
-      d3.selectAll('svg').remove()
+      d3.selectAll('#bottomSvg').remove()
 
       let width = 1000, // read 的长度
           height = 400
@@ -69,10 +201,10 @@ export default {
                 .attr("width", width + padding.left + padding.right)
                 .attr("height", height)
                 .style("border", "1px solid #d2d2d2")
+                .attr("id", "bottomSvg")
                 .append("g")
                 .attr("transform", "translate("+ padding.left + "," + padding.top +")")
 
-      let data = this.data
       let colorScale = d3.scaleOrdinal(d3.schemeCategory10)
 
       // ref_block 染色体用到的数据
