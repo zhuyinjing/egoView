@@ -92,8 +92,8 @@ export default {
       ref_block_data.unshift(0)
 
       // ref_block 动态比例尺
-      chrData.map(( {length, code}, i) => {
-        this["ref_block_scale" + code] = d3.scaleLinear().domain([0, length]).range([ref_block_data[i], ref_block_data[i + 1]])
+      chrData.map(( {length, name}, i) => {
+        this["ref_block_scale" + name.split("chr")[1]] = d3.scaleLinear().domain([0, length]).range([ref_block_data[i], ref_block_data[i + 1]])
       })
 
       // rect.ref_block
@@ -105,7 +105,7 @@ export default {
          .attr("y", ref_block_y)
          .attr("width", (d, i) => ref_block_data[i + 1] - ref_block_data[i])
          .attr("height", ref_block_height)
-         .attr("fill", d => colorScale(d.code))
+         .attr("fill", d => colorScale(d.name.split("chr")[1]))
          .attr("stroke", "black")
 
      // text.ref_block
@@ -241,8 +241,8 @@ export default {
       ref_block_data.unshift(0)
 
       // ref_block 动态比例尺
-      chrData.map(( {length, code}, i) => {
-        this["ref_block_scale" + code] = d3.scaleLinear().domain([0, length]).range([ref_block_data[i], ref_block_data[i + 1]])
+      chrData.map(( {length, name}, i) => {
+        this["ref_block_scale" + name.split("chr")[1]] = d3.scaleLinear().domain([0, length]).range([ref_block_data[i], ref_block_data[i + 1]])
       })
 
       // rect.ref_block
@@ -256,7 +256,7 @@ export default {
          .attr("y", ref_block_y)
          .attr("width", (d, i) => ref_block_data[i + 1] - ref_block_data[i])
          .attr("height", ref_block_height)
-         .attr("fill", d => colorScale(d.code))
+         .attr("fill", d => colorScale(d.name.split("chr")[1]))
          .attr("stroke", "black")
 
        // text.ref_block
@@ -338,7 +338,7 @@ export default {
 
       let queryScale = d3.scaleLinear().domain([0, data[0].ReadLength]).range([0, width]).nice()
       let queryAxis = d3.axisBottom().scale(queryScale).ticks(5).tickSize(0).tickPadding(10).tickFormat(d3.format(".2s"))
-      // let query = svg.append("g").call(queryAxis).attr("transform","translate("+ 0 +"," + (query_y + bottom_bar_height) +")")
+      let query = svg.append("g").call(queryAxis).attr("transform","translate("+ 0 +"," + (query_y + bottom_bar_height) +")") // query 的 横坐标显示需要的比例尺
       d3.select("path.domain").remove() // 把 queryAxis 的那条横线删掉
 
       for (let i = 0;i < data.length;i++) {
