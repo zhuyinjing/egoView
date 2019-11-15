@@ -41,6 +41,9 @@ export default {
       let data = blockList.map(item => this.readsData[item])
       let chrData = this.chrData
       let chromId = this.chromId
+      // 主分支的那条数据
+      let mainQNameArr = this.readsData[this.chromId + '.1'].readsMap
+      let mainQName = this.readsData[this.chromId + '.1'].readsMap.map(item => item.QName) // 只有 QName
 
       // 画图用到的数据初始化
       let colorScale = d3.scaleOrdinal(d3.schemeCategory10)
@@ -159,15 +162,12 @@ export default {
         this["alignment_scale" + blockList[i]] = d3.scaleLinear().domain([length[0], length[1]]).range([ref_interval_data[i], ref_interval_data[i + 1]])
       })
 
-      // line.alignment 的 y 值基准
-      let lineIndexArr = data[0].readsMap.map(d => d.QName)
-      let line_alignment_top_y = ref_interval_padding + ref_interval_y // line.alignment 第一个 line 距离矩形上边框的距离
-
-
       // 初始化 鼠标点击 reads 时的辅助线
       svg.append("rect").attr("id", "guide_line").attr("width", width).attr("height", line_h).attr("fill", "none").style("visibility", "hidden").attr("stroke","#ff0000")
 
       // line.alignment
+      let line_alignment_top_y = ref_interval_padding + ref_interval_y // line.alignment 第一个 line 距离矩形上边框的距离
+
       for (let i = 0;i < blockList.length;i++) {
         let item = blockList[i]
         svg.selectAll("line.alignment")
@@ -176,8 +176,8 @@ export default {
            .append("line")
            .attr("x1", d => this["alignment_scale" + item](d.AlignmentStart))
            .attr("x2", d => this["alignment_scale" + item](d.AlignmentEnd))
-           .attr("y1", d => line_alignment_top_y + lineIndexArr.indexOf(d.QName) * lineHeight)
-           .attr("y2", d => line_alignment_top_y + lineIndexArr.indexOf(d.QName) * lineHeight)
+           .attr("y1", d => line_alignment_top_y + mainQName.indexOf(d.QName) * lineHeight)
+           .attr("y2", d => line_alignment_top_y + mainQName.indexOf(d.QName) * lineHeight)
            .attr("stroke-width", line_h)
            .attr("stroke", d => d.readStrand ? "blue" : "red")
            .attr("stroke-opacity", 0.5)
@@ -186,7 +186,7 @@ export default {
            .on("click", function (d) {
              let y = d3.select(this).attr("y1")
              svg.select("rect#guide_line").attr("x",  0).attr("y", y - line_h / 2).style("visibility", "visible")
-             let read = data[0].readsMap.find(item => item.QName === d.QName)
+             let read = mainQNameArr.find(item => item.QName === d.QName)
              self.getBottomData(read)
            })
       }
