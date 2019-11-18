@@ -37,6 +37,8 @@ export default {
     initTopSvg () {
       let self = this
 
+      d3.selectAll('#topSvg').remove()
+
       let blockList = this.blockList
       let data = blockList.map(item => this.readsData[item])
       let chrData = this.chrData
